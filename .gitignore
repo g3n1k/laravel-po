@@ -1,3 +1,5 @@
 .env
 TMP/
 volumes/
+* copy/
+* copy.php
