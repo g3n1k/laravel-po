@@ -134,7 +134,7 @@ class PurchaseOrderController extends Controller
         $totalBill = 0;
         foreach ($customerOrders as $order) {
             $product = $order->product;
-            $totalBill += $product->price * $order->item_quantity;
+            $totalBill += $product->price * $order->received_quantity;
         }
 
         $totalDP = $purchaseOrder->downPayments()->where('customer_id', $customer->id)->sum('amount');
@@ -144,12 +144,15 @@ class PurchaseOrderController extends Controller
             // Update status semua pesanan pelanggan menjadi complete
             foreach ($customerOrders as $order) {
                 $order->status = 'complete';
-                $order->received_quantity = $order->item_quantity; // Terima semua item
+
+                // kenyataannya tidak semua item akan diterima, tergantung dari stock
+                // $order->received_quantity = $order->item_quantity; // Terima semua item
+
                 $order->save();
 
                 // Kurangi stok produk
                 $product = $order->product;
-                $product->stock -= $order->item_quantity;
+                $product->stock -= $order->received_quantity;
                 $product->save();
             }
 

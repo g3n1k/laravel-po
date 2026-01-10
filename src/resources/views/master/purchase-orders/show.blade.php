@@ -3,7 +3,7 @@
 @section('content')
 <div class="container">
     <div class="row">
-        <div class="col-md-8">
+        <div class="col-md-12">
             <h1>Detail Purchase Order</h1>
             
             <div class="card">
@@ -152,6 +152,7 @@
                                             <tr>
                                                 <th>Nama Pelanggan</th>
                                                 <th>Jumlah Item Dipesan</th>
+                                                <th>Jumlah Item Diterima</th>
                                                 <th>Total DP</th>
                                                 <th>Tagihan yang Harus Dibayar</th>
                                                 <th>Kurang Bayar</th>
@@ -169,15 +170,17 @@
                                                         $customerSummary[$customerId] = [
                                                             'customer' => $poCustomer->customer,
                                                             'total_items' => 0,
+                                                            'total_received' => 0,
                                                             'total_bill' => 0
                                                         ];
                                                     }
 
                                                     $customerSummary[$customerId]['total_items'] += $poCustomer->item_quantity;
+                                                    $customerSummary[$customerId]['total_received'] += $poCustomer->received_quantity;
 
-                                                    // Hitung total tagihan berdasarkan produk yang dipesan
+                                                    // Hitung total tagihan berdasarkan produk yang diterima
                                                     $product = $poCustomer->product;
-                                                    $customerSummary[$customerId]['total_bill'] += $product->price * $poCustomer->item_quantity;
+                                                    $customerSummary[$customerId]['total_bill'] += $product->price * $poCustomer->received_quantity;
                                                 }
 
                                                 // Inisialisasi total DP untuk semua pelanggan
@@ -201,6 +204,7 @@
                                             <tr>
                                                 <td>{{ $summary['customer']->name }}</td>
                                                 <td>{{ $summary['total_items'] }}</td>
+                                                <td>{{ $summary['total_received'] }}</td>
                                                 <td>Rp {{ number_format($summary['total_dp'] ?? 0, 0, ',', '.') }}</td>
                                                 <td>Rp {{ number_format($summary['total_bill'], 0, ',', '.') }}</td>
                                                 <td>Rp {{ number_format($outstandingAmount, 0, ',', '.') }}</td>
