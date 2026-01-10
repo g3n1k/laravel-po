@@ -1,5 +1,7 @@
 .env
 TMP/
 volumes/
+volumes/*
+.volumes.swp
 * copy/
 * copy.php

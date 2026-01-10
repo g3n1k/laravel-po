@@ -7,8 +7,9 @@
             <h1>Penyelesaian Transaksi - {{ $customer->name }} ({{ $purchaseOrder->title }})</h1>
             
             <div class="d-flex justify-content-between mb-3">
-                <a href="{{ route('po.customers.index', $purchaseOrder) }}" class="btn btn-secondary">
-                    <i class="fas fa-arrow-left"></i> Kembali ke Daftar Pelanggan
+                
+                <a href="{{ route('master.purchase-orders.show', $purchaseOrder) }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Kembali ke Detail PO
                 </a>
                 <a href="{{ route('po.index') }}" class="btn btn-outline-secondary">Kembali ke Daftar PO</a>
             </div>

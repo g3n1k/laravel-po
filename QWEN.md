@@ -151,6 +151,9 @@ PO Inna Cookies | ibu saibah | 2025-01-14 17:03 | putri coklat | 3
 pelanggan kakak nuri mendapat 3 item putri coklat
 dan ibu saibah hanya mendapat 2 item putri coklat
 
+
+# distribusi stock
+
 ---
 # data master
 ---

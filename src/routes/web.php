@@ -70,6 +70,16 @@ Route::middleware('auth')->group(function () {
             Route::delete('/{poCustomer}', [App\Http\Controllers\PoCustomerController::class, 'destroy'])->name('destroy');
         });
 
+        // Stock distribution routes (outside the customers prefix group)
+        Route::prefix('{purchaseOrder}/customers')->group(function () {
+            Route::get('/distribute-stock', [App\Http\Controllers\PoCustomerController::class, 'distributeStock'])->name('po.customers.distribute-stock');
+            Route::post('/distribute-stock', [App\Http\Controllers\PoCustomerController::class, 'processDistributeStock'])->name('po.customers.process-distribute-stock');
+        });
+
+        // Product-specific stock distribution route
+        Route::get('/{purchaseOrder}/product/{product}/distribute-stock', [App\Http\Controllers\PoCustomerController::class, 'distributeProductStock'])->name('po.product.distribute-stock');
+        Route::post('/{purchaseOrder}/product/{product}/distribute-stock', [App\Http\Controllers\PoCustomerController::class, 'processDistributeProductStock'])->name('po.product.process-distribute-stock');
+
         // Down payments
         Route::prefix('{purchaseOrder}/down-payments')->name('down-payments.')->group(function () {
             Route::get('/', [App\Http\Controllers\DownPaymentController::class, 'index'])->name('index');

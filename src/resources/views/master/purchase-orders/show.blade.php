@@ -53,7 +53,7 @@
                         <div class="col-md-3 mb-3">
                             <div class="card bg-primary text-white">
                                 <div class="card-body text-center">
-                                    <h5>Total DP</h5>
+                                    <h5>Down Payment</h5>
                                     <h3>Rp {{ number_format($purchaseOrder->downPayments->sum('amount'), 0, ',', '.') }}</h3>
                                 </div>
                             </div>
@@ -61,7 +61,7 @@
                         <div class="col-md-3 mb-3">
                             <div class="card bg-success text-white">
                                 <div class="card-body text-center">
-                                    <h5>Jumlah Pelanggan</h5>
+                                    <h5>Pelanggan</h5>
                                     <h3>{{ $purchaseOrder->poCustomers->pluck('customer_id')->unique()->count() }}</h3>
                                 </div>
                             </div>
@@ -69,7 +69,7 @@
                         <div class="col-md-3 mb-3">
                             <div class="card bg-info text-white">
                                 <div class="card-body text-center">
-                                    <h5>Jumlah Produk</h5>
+                                    <h5>Produk</h5>
                                     <h3>{{ $purchaseOrder->products->count() }}</h3>
                                 </div>
                             </div>
@@ -77,7 +77,7 @@
                         <div class="col-md-3 mb-3">
                             <div class="card bg-warning text-dark">
                                 <div class="card-body text-center">
-                                    <h5>Total Item Dipesan</h5>
+                                    <h5>Total Item</h5>
                                     <h3>{{ $purchaseOrder->poCustomers->sum('item_quantity') }}</h3>
                                 </div>
                             </div>
@@ -122,9 +122,14 @@
                                                     @endif
                                                 </td>
                                                 <td>
-                                                    <a href="{{ route('master.products.edit', $product) }}" class="btn btn-warning btn-sm">
-                                                        <i class="fas fa-edit"></i> Edit Stok
-                                                    </a>
+                                                    <div class="btn-group" role="group">
+                                                        <a href="{{ route('master.products.edit', $product) }}" class="btn btn-warning btn-sm">
+                                                            <i class="fas fa-edit"></i> Edit Stok
+                                                        </a>
+                                                        <a href="{{ route('po.po.product.distribute-stock', ['purchaseOrder' => $purchaseOrder, 'product' => $product]) }}" class="btn btn-success btn-sm">
+                                                            <i class="fas fa-boxes"></i> Distribusi Stock
+                                                        </a>
+                                                    </div>
                                                 </td>
                                             </tr>
                                             @endforeach

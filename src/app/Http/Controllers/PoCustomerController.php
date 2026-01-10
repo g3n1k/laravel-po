@@ -225,4 +225,109 @@ class PoCustomerController extends Controller
 
         return view('po-customers.complete-transaction', compact('purchaseOrder', 'customer', 'aggregatedOrders', 'totalBill', 'totalDP', 'remainingPayment'));
     }
+
+    /**
+     * Show the form for distributing stock for a purchase order
+     */
+    public function distributeStock(PurchaseOrder $purchaseOrder)
+    {
+        // Ambil semua pesanan pelanggan dalam PO ini dan kelompokkan berdasarkan customer
+        $poCustomersGrouped = $purchaseOrder->poCustomers()
+            ->with(['customer', 'product'])
+            ->orderBy('customer_id')
+            ->orderBy('ordered_at')
+            ->get()
+            ->groupBy('customer_id');
+
+        return view('po-customers.distribute-stock', compact('purchaseOrder', 'poCustomersGrouped'));
+    }
+
+    /**
+     * Process the stock distribution for a purchase order
+     */
+    public function processDistributeStock(Request $request, PurchaseOrder $purchaseOrder)
+    {
+        $request->validate([
+            'received_quantities' => 'required|array',
+            'received_quantities.*' => 'required|integer|min:0',
+        ]);
+
+        $receivedQuantities = $request->received_quantities;
+
+        foreach ($receivedQuantities as $poCustomerId => $receivedQuantity) {
+            $poCustomer = $purchaseOrder->poCustomers()->find($poCustomerId);
+
+            if ($poCustomer) {
+                // Update received quantity
+                $poCustomer->received_quantity = $receivedQuantity;
+
+                // Update status berdasarkan received quantity
+                if ($receivedQuantity == 0) {
+                    $poCustomer->status = 'out_of_stock';
+                } elseif ($receivedQuantity < $poCustomer->item_quantity) {
+                    $poCustomer->status = 'not_complete';
+                } elseif ($receivedQuantity >= $poCustomer->item_quantity) {
+                    $poCustomer->status = 'complete';
+                }
+
+                $poCustomer->save();
+            }
+        }
+
+        return redirect()->route('po.customers.index', $purchaseOrder)
+            ->with('success', 'Distribusi stok berhasil disimpan.');
+    }
+
+    /**
+     * Show the form for distributing stock for a specific product in a purchase order
+     */
+    public function distributeProductStock(PurchaseOrder $purchaseOrder, Product $product)
+    {
+        // Ambil semua pesanan pelanggan untuk produk ini dalam PO ini dan urutkan berdasarkan tanggal pemesanan
+        $poCustomers = $purchaseOrder->poCustomers()
+            ->where('product_id', $product->id)
+            ->with(['customer', 'product'])
+            ->orderBy('ordered_at')
+            ->get();
+
+        return view('po-customers.distribute-product-stock', compact('purchaseOrder', 'product', 'poCustomers'));
+    }
+
+    /**
+     * Process the stock distribution for a specific product in a purchase order
+     */
+    public function processDistributeProductStock(Request $request, PurchaseOrder $purchaseOrder, Product $product)
+    {
+        $request->validate([
+            'received_quantities' => 'required|array',
+            'received_quantities.*' => 'required|integer|min:0',
+        ]);
+
+        $receivedQuantities = $request->received_quantities;
+
+        foreach ($receivedQuantities as $poCustomerId => $receivedQuantity) {
+            $poCustomer = $purchaseOrder->poCustomers()->find($poCustomerId);
+
+            // Pastikan poCustomer ini milik produk yang benar dan PO yang benar
+            if ($poCustomer && $poCustomer->product_id == $product->id && $poCustomer->purchase_order_id == $purchaseOrder->id) {
+                // Update received quantity
+                $poCustomer->received_quantity = $receivedQuantity;
+
+                // Update status berdasarkan received quantity
+                if ($receivedQuantity == 0) {
+                    $poCustomer->status = 'out_of_stock';
+                } elseif ($receivedQuantity < $poCustomer->item_quantity) {
+                    $poCustomer->status = 'not_complete';
+                } elseif ($receivedQuantity >= $poCustomer->item_quantity) {
+                    $poCustomer->status = 'complete';
+                }
+
+                $poCustomer->save();
+            }
+        }
+
+        return redirect()->route('master.purchase-orders.show', $purchaseOrder)
+            ->with('success', 'Distribusi stok produk berhasil disimpan.');
+    }
 }
+
