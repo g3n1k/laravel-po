@@ -102,6 +102,38 @@
                     </div>
                 </div>
             </div>
+
+            @if(isset($recentActivities) && $recentActivities->count() > 0)
+            <div class="row mt-4">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Log Aktivitas Terbaru</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Tanggal</th>
+                                            <th>Kegiatan</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach($recentActivities as $activity)
+                                        <tr>
+                                            <td>{{ $activity->created_at->format('Y-m-d H:i') }}</td>
+                                            <td>{{ $activity->description }}</td>
+                                        </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @endif
         </div>
     </div>
 </div>

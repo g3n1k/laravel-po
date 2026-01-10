@@ -51,6 +51,9 @@ class PurchaseOrderController extends Controller
             }
         }
 
+        // Log activity when creating a purchase order
+        tulis_log_activity("membuat purcase order \"{$purchaseOrder->title}\"", PurchaseOrder::class, $purchaseOrder->id);
+
         return redirect()->route('master.purchase-orders.index')->with('success', 'Purchase Order created successfully.');
     }
 
@@ -105,6 +108,9 @@ class PurchaseOrderController extends Controller
             $purchaseOrder->products()->detach();
         }
 
+        // Log activity when updating a purchase order
+        tulis_log_activity("mengedit purcase order \"{$purchaseOrder->title}\"", PurchaseOrder::class, $purchaseOrder->id);
+
         return redirect()->route('master.purchase-orders.index')->with('success', 'Purchase Order updated successfully.');
     }
 
@@ -113,7 +119,11 @@ class PurchaseOrderController extends Controller
      */
     public function destroy(PurchaseOrder $purchaseOrder)
     {
+        $title = $purchaseOrder->title;
         $purchaseOrder->delete();
+
+        // Log activity when deleting a purchase order
+        tulis_log_activity("menghapus purcase order \"{$title}\"", PurchaseOrder::class, $purchaseOrder->id);
 
         return redirect()->route('master.purchase-orders.index')->with('success', 'Purchase Order deleted successfully.');
     }

@@ -36,7 +36,10 @@ class CustomerController extends Controller
             'address' => 'nullable|string',
         ]);
 
-        Customer::create($request->all());
+        $customer = Customer::create($request->all());
+
+        // Log activity when creating a customer
+        tulis_log_activity("menambah pelanggan baru {$customer->name}", Customer::class, $customer->id);
 
         return redirect()->route('master.customers.index')->with('success', 'Customer created successfully.');
     }
@@ -69,7 +72,11 @@ class CustomerController extends Controller
             'address' => 'nullable|string',
         ]);
 
+        $oldName = $customer->name;
         $customer->update($request->all());
+
+        // Log activity when updating a customer
+        tulis_log_activity("mengedit pelanggan {$oldName} menjadi {$customer->name}", Customer::class, $customer->id);
 
         return redirect()->route('master.customers.index')->with('success', 'Customer updated successfully.');
     }
@@ -79,7 +86,11 @@ class CustomerController extends Controller
      */
     public function destroy(Customer $customer)
     {
+        $customerName = $customer->name;
         $customer->delete();
+
+        // Log activity when deleting a customer
+        tulis_log_activity("menghapus pelanggan {$customerName}", Customer::class, $customer->id);
 
         return redirect()->route('master.customers.index')->with('success', 'Customer deleted successfully.');
     }

@@ -187,3 +187,17 @@ perhatikan docker-compose.yaml file
 dan perhatikan file Makefile
 
 untuk menjalankan artisan
+
+
+## halaman
+
+### dashboard
+
+tampilkan table logs pekerjaan
+seperti
+tanggal | kegiatan
+2025-12-29 11:36 | indra memesan 2 edamame
+2025-12-29 11:35 | gilby memesan 3 edamame
+2025-12-29 11:34 | gilby memesan 3 tape pati
+2025-12-29 11:33 | gilby memesan 5 tape pati
+2025-12-29 10:32 | membuat purcase order "judul purcase order"

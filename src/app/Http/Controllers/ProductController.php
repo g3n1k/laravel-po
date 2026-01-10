@@ -36,7 +36,10 @@ class ProductController extends Controller
             'description' => 'nullable|string',
         ]);
 
-        Product::create($request->all());
+        $product = Product::create($request->all());
+
+        // Log activity when creating a product
+        tulis_log_activity("menambah produk baru {$product->name}", Product::class, $product->id);
 
         return redirect()->route('master.products.index')->with('success', 'Product created successfully.');
     }
@@ -69,7 +72,11 @@ class ProductController extends Controller
             'description' => 'nullable|string',
         ]);
 
+        $oldName = $product->name;
         $product->update($request->all());
+
+        // Log activity when updating a product
+        tulis_log_activity("mengedit produk {$oldName} menjadi {$product->name}", Product::class, $product->id);
 
         return redirect()->route('master.products.index')->with('success', 'Product updated successfully.');
     }
@@ -79,7 +86,11 @@ class ProductController extends Controller
      */
     public function destroy(Product $product)
     {
+        $productName = $product->name;
         $product->delete();
+
+        // Log activity when deleting a product
+        tulis_log_activity("menghapus produk {$productName}", Product::class, $product->id);
 
         return redirect()->route('master.products.index')->with('success', 'Product deleted successfully.');
     }

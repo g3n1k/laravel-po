@@ -54,6 +54,9 @@ class StockAdjustmentController extends Controller
         $product->stock = $finalStock;
         $product->save();
 
+        // Log activity when adjusting stock
+        tulis_log_activity("menambah {$request->adjustment} stock produk {$product->name}", Product::class, $product->id);
+
         return redirect()->route('po.stock-adjustments.index', $purchaseOrder)->with('success', 'Penyesuaian stok berhasil ditambahkan.');
     }
 
@@ -101,6 +104,9 @@ class StockAdjustmentController extends Controller
         $product->stock = $product->stock + $difference;
         $product->save();
 
+        // Log activity when updating stock adjustment
+        tulis_log_activity("mengedit penyesuaian stok produk {$product->name}", Product::class, $product->id);
+
         return redirect()->route('po.stock-adjustments.index', $stockAdjustment->product->purchase_order_id)->with('success', 'Penyesuaian stok berhasil diperbarui.');
     }
 
@@ -117,6 +123,9 @@ class StockAdjustmentController extends Controller
         $product->save();
 
         $stockAdjustment->delete();
+
+        // Log activity when deleting stock adjustment
+        tulis_log_activity("menghapus penyesuaian stok produk {$product->name}", Product::class, $product->id);
 
         return redirect()->route('po.stock-adjustments.index', $purchaseOrderId)->with('success', 'Penyesuaian stok berhasil dihapus.');
     }

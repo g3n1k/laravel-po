@@ -43,11 +43,17 @@ class PoCustomerController extends Controller
 
         $poCustomer = new PoCustomer();
         $poCustomer->purchase_order_id = $purchaseOrder->id;
+        $customer = Customer::find($request->customer_id);
+        $product = Product::find($request->product_id);
+
         $poCustomer->customer_id = $request->customer_id;
         $poCustomer->product_id = $request->product_id;
         $poCustomer->item_quantity = $request->item_quantity;
         $poCustomer->ordered_at = now(); // Gunakan waktu lokal saat ini
         $poCustomer->save();
+
+        // Log activity when customer places an order
+        tulis_log_activity("{$customer->name} memesan {$poCustomer->item_quantity} {$product->name}", Customer::class, $customer->id);
 
         return redirect()->route('po.customers.index', $purchaseOrder)->with('success', 'Pesanan pelanggan berhasil ditambahkan.');
     }
@@ -97,10 +103,15 @@ class PoCustomerController extends Controller
             'item_quantity' => 'required|integer|min:1',
         ]);
 
+        $customer = $poCustomer->customer;
+        $product = $poCustomer->product;
         $poCustomer->customer_id = $request->customer_id;
         $poCustomer->product_id = $request->product_id;
         $poCustomer->item_quantity = $request->item_quantity;
         $poCustomer->save();
+
+        // Log activity when updating customer's order
+        tulis_log_activity("mengedit pesanan {$customer->name} untuk {$poCustomer->item_quantity} {$product->name}", Customer::class, $customer->id);
 
         return redirect()->route('po.customers.index', $purchaseOrder)->with('success', 'Pesanan pelanggan berhasil diperbarui.');
     }
@@ -115,7 +126,12 @@ class PoCustomerController extends Controller
             abort(404);
         }
 
+        $customer = $poCustomer->customer;
+        $product = $poCustomer->product;
         $poCustomer->delete();
+
+        // Log activity when deleting customer's order
+        tulis_log_activity("menghapus pesanan {$customer->name} untuk {$product->name}", Customer::class, $customer->id);
 
         return redirect()->route('po.customers.index', $purchaseOrder)->with('success', 'Pesanan pelanggan berhasil dihapus.');
     }
