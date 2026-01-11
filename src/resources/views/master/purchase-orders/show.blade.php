@@ -123,9 +123,6 @@
                                                 </td>
                                                 <td>
                                                     <div class="btn-group" role="group">
-                                                        <a href="{{ route('master.products.edit', $product) }}" class="btn btn-warning btn-sm">
-                                                            <i class="fas fa-edit"></i> Edit Stok
-                                                        </a>
                                                         <a href="{{ route('po.po.product.distribute-stock', ['purchaseOrder' => $purchaseOrder, 'product' => $product]) }}" class="btn btn-success btn-sm">
                                                             <i class="fas fa-boxes"></i> Distribusi Stock
                                                         </a>
@@ -214,6 +211,8 @@
                                                             <a href="{{ route('po.customers.show-complete-transaction', [$purchaseOrder, $summary['customer']]) }}" class="btn btn-primary btn-sm">
                                                                 <i class="fas fa-cash-register"></i> Proses
                                                             </a>
+                                                        @elseif($summary['total_bill'] == 0)
+                                                            <span class="badge bg-warning">Out Stock</span>
                                                         @else
                                                             <span class="badge bg-success">Lunas</span>
                                                         @endif
@@ -230,9 +229,22 @@
                         </div>
                     </div>
                 </div>
-                <div class="card-footer">
-                    <a href="{{ route('master.purchase-orders.index') }}" class="btn btn-secondary">Kembali</a>
-                    <a href="{{ route('master.purchase-orders.edit', $purchaseOrder) }}" class="btn btn-warning">Edit</a>
+                <div class="card-footer d-flex justify-content-between">
+                    <div>
+                        <a href="{{ route('po.index') }}" class="btn btn-info">Kembali</a>
+                        <a href="{{ route('master.purchase-orders.edit', $purchaseOrder) }}" class="btn btn-warning">Edit</a>
+                    </div>
+                    <div>
+                        <a href="{{ route('po.customers.index', $purchaseOrder) }}" class="btn btn-primary">
+                            <i class="fas fa-users"></i> Pesanan
+                        </a>
+                        <a href="{{ route('po.down-payments.index', $purchaseOrder) }}" class="btn btn-success">
+                            <i class="fas fa-money-bill-wave"></i> DP
+                        </a>
+                        <a href="{{ route('po.stock-adjustments.index', $purchaseOrder) }}" class="btn btn-secondary">
+                            <i class="fas fa-boxes"></i> Stok
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>

@@ -10,6 +10,9 @@
                 <a href="{{ route('master.purchase-orders.create') }}" class="btn btn-primary">
                     <i class="fas fa-plus"></i> Tambah PO
                 </a>
+                <a href="{{ route('po.index') }}" class="btn btn-primary">
+                    <i class="fas fa-money-bill-wave"></i> Purcase Order
+                </a>
             </div>
             
             @if(session('success'))

@@ -10,7 +10,10 @@
                 <a href="{{ route('po.customers.create', $purchaseOrder) }}" class="btn btn-primary">
                     <i class="fas fa-plus"></i> Tambah Pesanan Pelanggan
                 </a>
-                <a href="{{ route('po.index') }}" class="btn btn-secondary">Kembali ke Daftar PO</a>
+                
+                <a href="{{ route('master.purchase-orders.show', $purchaseOrder) }}" class="btn btn-info">
+                    <i class="fas fa-eye"></i> Kembali Ke PO
+                </a>
             </div>
             
             @if(session('success'))

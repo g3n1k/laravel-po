@@ -119,16 +119,23 @@
                                     <span id="remaining-payment">Rp {{ number_format($remainingPayment, 0, ',', '.') }}</span>
                                 </div>
                                 <hr>
+                                <div class="mb-3">
+                                    <label for="additional_payment" class="form-label">Bayar Tambahan</label>
+                                    <input type="number" class="form-control" id="additional_payment" min="0" value="0">
+                                    <div class="form-text">Masukkan jumlah pembayaran tambahan jika pelanggan membayar sebagian atau lunas</div>
+                                </div>
+
                                 <div class="d-flex justify-content-between mb-3">
                                     <strong>Total yang Harus Dibayar:</strong>
                                     <strong id="final-amount">Rp {{ number_format($remainingPayment, 0, ',', '.') }}</strong>
                                 </div>
-                                
+
                                 <form action="{{ route('po.customers.complete-transaction', [$purchaseOrder, $customer]) }}" method="POST">
                                     @csrf
                                     <input type="hidden" name="received_quantities" id="receivedQuantitiesInput">
                                     <input type="hidden" name="notes" id="notesInput">
-                                    <button type="submit" class="btn btn-success w-100" id="complete-btn" {{ $remainingPayment > 0 ? 'disabled' : '' }}>
+                                    <input type="hidden" name="additional_payment" id="additionalPaymentInput" value="0">
+                                    <button type="submit" class="btn btn-success w-100" id="complete-btn">
                                         <i class="fas fa-check-circle"></i> Selesaikan Transaksi
                                     </button>
                                 </form>
@@ -151,6 +158,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const notesInput = document.getElementById('notes');
     const receivedQuantitiesInput = document.querySelector('input[name="received_quantities"]');
     const notesHiddenInput = document.querySelector('input[name="notes"]');
+    const additionalPaymentInput = document.getElementById('additional_payment');
+    const additionalPaymentHiddenInput = document.getElementById('additionalPaymentInput');
 
     // Fungsi untuk menghitung ulang total dan sisa pembayaran
     function updateTotals() {
@@ -179,18 +188,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Hitung sisa pembayaran
         const totalDP = {{ $totalDP }};
-        const remainingPayment = totalBill - totalDP;
+        const additionalPayment = parseInt(additionalPaymentInput.value) || 0;
+        const totalPaid = totalDP + additionalPayment;
+        const remainingPayment = totalBill - totalPaid;
 
         // Update sisa pembayaran
         remainingPaymentElement.textContent = 'Rp ' + Math.abs(remainingPayment).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
         finalAmountElement.textContent = 'Rp ' + Math.max(0, remainingPayment).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
         // Aktifkan/nonaktifkan tombol selesai berdasarkan sisa pembayaran
-        if (remainingPayment <= 0) {
-            completeBtn.disabled = false;
-        } else {
-            completeBtn.disabled = true;
-        }
+        // Tombol sekarang selalu aktif karena bisa saja pelanggan membayar sebagian
+        completeBtn.disabled = false;
 
         // Simpan jumlah diterima ke input tersembunyi
         const quantities = {};
@@ -198,12 +206,18 @@ document.addEventListener('DOMContentLoaded', function() {
             quantities[input.dataset.productId] = input.value;
         });
         receivedQuantitiesInput.value = JSON.stringify(quantities);
+
+        // Simpan pembayaran tambahan ke input tersembunyi
+        additionalPaymentHiddenInput.value = additionalPayment;
     }
 
     // Tambahkan event listener untuk perubahan jumlah diterima
     receivedQuantityInputs.forEach(input => {
         input.addEventListener('change', updateTotals);
     });
+
+    // Tambahkan event listener untuk perubahan pembayaran tambahan
+    additionalPaymentInput.addEventListener('input', updateTotals);
 
     // Simpan catatan ke input tersembunyi saat berubah
     notesInput.addEventListener('input', function() {
