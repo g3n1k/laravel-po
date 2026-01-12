@@ -10,7 +10,10 @@
                 <a href="{{ route('po.stock-adjustments.create', $purchaseOrder) }}" class="btn btn-primary">
                     <i class="fas fa-plus"></i> Tambah Penyesuaian Stok
                 </a>
-                <a href="{{ route('po.index') }}" class="btn btn-secondary">Kembali ke Daftar PO</a>
+                <a href="{{ route('master.purchase-orders.show', $purchaseOrder) }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Kembali ke Detail PO
+                </a>
+               
             </div>
             
             @if(session('success'))

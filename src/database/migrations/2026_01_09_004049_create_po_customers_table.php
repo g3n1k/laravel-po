@@ -19,6 +19,9 @@ return new class extends Migration
             $table->integer('item_quantity');
             $table->integer('received_quantity')->default(0);
             $table->enum('status', ['waiting', 'complete', 'out_of_stock', 'not_complete', 'cancel'])->default('waiting');
+            $table->enum('payment_status', ['unpaid', 'paid'])->default('unpaid');
+            $table->decimal('payment_amount', 10, 2)->default(0);
+            $table->decimal('payment_product_price', 10, 2)->default(0);
             $table->timestamp('ordered_at')->useCurrent();
             $table->timestamps();
         });

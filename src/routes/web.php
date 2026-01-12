@@ -105,6 +105,9 @@ Route::middleware('auth')->group(function () {
         // Complete transaction
         Route::get('{purchaseOrder}/complete-transaction/{customer}', [App\Http\Controllers\PoCustomerController::class, 'showCompleteTransaction'])->name('customers.show-complete-transaction');
         Route::post('{purchaseOrder}/complete-transaction/{customer}', [App\Http\Controllers\PoCustomerController::class, 'completeTransaction'])->name('customers.complete-transaction');
+
+        // Transaction detail
+        Route::get('{purchaseOrder}/transaction-detail/{customer}', [App\Http\Controllers\PoCustomerController::class, 'showTransactionDetail'])->name('customers.show-transaction-detail');
     });
 });
 

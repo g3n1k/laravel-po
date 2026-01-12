@@ -18,8 +18,8 @@ class PurchaseOrderSeeder extends Seeder
         
         if ($products->count() > 0) {
             $purchaseOrder = PurchaseOrder::create([
-                'title' => 'OPEN PO Inna Cookies',
-                'description' => 'Purchase order untuk produk Inna Cookies',
+                'title' => 'OPEN PO test multi items',
+                'description' => 'Purchase order untuk multi items produk',
                 'start_date' => now()->addDays(10), // 10 hari dari sekarang
                 'end_date' => now()->addDays(40),  // 40 hari dari sekarang
                 'status' => 'open'

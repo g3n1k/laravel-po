@@ -5,35 +5,30 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class PoCustomer extends Model
+class TransactionSummary extends Model
 {
     use HasFactory;
 
     protected $fillable = [
         'purchase_order_id',
         'customer_id',
-        'product_id',
-        'item_quantity',
-        'received_quantity',
+        'total_bill',
+        'total_dp',
+        'additional_payment',
+        'remaining_payment',
         'status',
-        'payment_status',
-        'payment_amount',
-        'payment_product_price',
-        'ordered_at',
+        'notes',
+        'completed_at'
     ];
 
     protected $casts = [
-        'item_quantity' => 'integer',
-        'received_quantity' => 'integer',
-        'ordered_at' => 'datetime',
+        'total_bill' => 'decimal:2',
+        'total_dp' => 'decimal:2',
+        'additional_payment' => 'decimal:2',
+        'remaining_payment' => 'decimal:2',
+        'completed_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
-    ];
-
-    protected $dates = [
-        'ordered_at',
-        'created_at',
-        'updated_at',
     ];
 
     public function purchaseOrder()
@@ -44,10 +39,5 @@ class PoCustomer extends Model
     public function customer()
     {
         return $this->belongsTo(Customer::class);
-    }
-
-    public function product()
-    {
-        return $this->belongsTo(Product::class);
     }
 }

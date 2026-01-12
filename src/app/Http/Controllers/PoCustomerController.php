@@ -139,60 +139,136 @@ class PoCustomerController extends Controller
     /**
      * Complete transaction for a specific customer in a purchase order
      */
-    public function completeTransaction(PurchaseOrder $purchaseOrder, Customer $customer)
+    public function completeTransaction(Request $request, PurchaseOrder $purchaseOrder, Customer $customer)
     {
         // Ambil semua pesanan pelanggan dalam PO ini
-        $customerOrders = $purchaseOrder->poCustomers()->where('customer_id', $customer->id)->get();
+        $customerOrders = $purchaseOrder->poCustomers()->where('customer_id', $customer->id)->where('purchase_order_id', $purchaseOrder->id)->get();
 
         if ($customerOrders->isEmpty()) {
             return redirect()->back()->with('error', 'Tidak ditemukan pesanan untuk pelanggan ini dalam PO ini.');
         }
 
-        // Hitung total tagihan dan total DP
+        // Cek apakah semua pesanan pelanggan sudah dalam status complete
+        $allComplete = $customerOrders->every(function ($order) {
+            return $order->payment_status === 'paid';
+        });
+
+        if ($allComplete) {
+            return redirect()->back()->with('error', 'Transaksi pelanggan ' . $customer->name . ' sudah diselesaikan sebelumnya.');
+        }
+
+        // Update status berdasarkan received quantity yang sudah ada
+        foreach ($customerOrders as $order) {
+            // Simpan status sebelumnya untuk membandingkan perubahan
+            $previousPaymentStatus = $order->payment_status;
+
+            // Update status berdasarkan received quantity yang sudah ada
+            if ($order->received_quantity == 0) {
+                $order->status = 'out_of_stock';
+            } elseif ($order->received_quantity < $order->item_quantity) {
+                $order->status = 'not_complete';
+            } elseif ($order->received_quantity >= $order->item_quantity) {
+                $order->status = 'complete';
+            }
+
+            // Update payment status dan kolom terkait jika status berubah dari unpaid ke paid
+            if ($previousPaymentStatus === 'unpaid') {
+                $order->payment_status = 'paid';
+                $order->payment_product_price = $order->product->price; // Harga produk saat pembayaran
+                $order->payment_amount = $order->product->price * $order->received_quantity; // Jumlah pembayaran
+            }
+
+            $order->save();
+        }
+
+        // Hitung total tagihan berdasarkan received quantity
         $totalBill = 0;
         foreach ($customerOrders as $order) {
             $product = $order->product;
             $totalBill += $product->price * $order->received_quantity;
         }
 
-        $totalDP = $purchaseOrder->downPayments()->where('customer_id', $customer->id)->sum('amount');
+        $totalDP = $purchaseOrder->downPayments()->where('customer_id', $customer->id)->where('purchase_order_id', $purchaseOrder->id)->sum('amount');
+        $additionalPayment = $request->additional_payment ?? 0;
+        $totalPaid = $totalDP + $additionalPayment;
 
-        // Periksa apakah pelanggan sudah membayar lunas
-        if ($totalDP >= $totalBill) {
-            // Update status semua pesanan pelanggan menjadi complete
-            foreach ($customerOrders as $order) {
-                $order->status = 'complete';
-                
-                // kenyataannya tidak semua item akan diterima, tergantung dari stock
-                // $order->received_quantity = $order->item_quantity; // Terima semua item
+        // Update status semua pesanan pelanggan menjadi complete jika pembayaran cukup
+        foreach ($customerOrders as $order) {
+            // Update status berdasarkan received quantity (sudah diupdate di atas)
+            // Jika pembayaran cukup, maka status tetap atau diupdate ke complete
+            if ($totalPaid >= $totalBill) {
+                // Update payment status ke paid karena transaksi selesai
+                $order->payment_status = 'paid';
+                $order->payment_product_price = $order->product->price; // Harga produk saat pembayaran
+                $order->payment_amount = $order->product->price * $order->received_quantity; // Jumlah pembayaran
+            }
+            $order->save();
 
-                $order->save();
+            // Kurangi stok produk jika status complete
+            if ($order->payment_status === 'paid') {
+                // Baca ulang jumlah stock yang ada di table product
+                $jumlah_stock_real = \App\Models\Product::find($order->product_id)->stock;
 
-                // Kurangi stok produk
+                \Log::info('Processing stock reduction', [
+                    'customer_name' => $customer->name,
+                    'product_name' => $order->product->name,
+                    'received_quantity' => $order->received_quantity,
+                    'current_stock_before' => $jumlah_stock_real,
+                    'order_id' => $order->id,
+                    'purchase_order_id' => $purchaseOrder->id
+                ]);
+
                 $product = $order->product;
-                $product->stock -= $order->received_quantity;
+                $product->stock = $jumlah_stock_real - $order->received_quantity;
                 $product->save();
+
+                \Log::info('Stock after reduction', [
+                    'product_name' => $product->name,
+                    'new_stock' => $product->stock,
+                    'reduced_by' => $order->received_quantity
+                ]);
+
+                // Log activity when completing customer's order
+                tulis_log_activity("menyelesaikan pesanan {$customer->name} untuk {$order->item_quantity} {$product->name}", Customer::class, $customer->id);
             }
-
-            // Update status PO jika semua pelanggan telah melunasi pembayaran
-            $remainingCustomers = $purchaseOrder->poCustomers()
-                ->whereHas('customer', function($query) use ($purchaseOrder) {
-                    $query->whereHas('poCustomers', function($subQuery) use ($purchaseOrder) {
-                        $subQuery->where('purchase_order_id', $purchaseOrder->id)
-                                 ->where('status', '!=', 'complete');
-                    });
-                })
-                ->count();
-
-            if ($remainingCustomers === 0) {
-                $purchaseOrder->status = 'completed';
-                $purchaseOrder->save();
-            }
-
-            return redirect()->back()->with('success', 'Transaksi pelanggan ' . $customer->name . ' telah diselesaikan.');
-        } else {
-            return redirect()->back()->with('error', 'Pembayaran pelanggan ' . $customer->name . ' belum lunas. Mohon lengkapi pembayaran terlebih dahulu.');
         }
+
+        // Buat entri ringkasan transaksi
+        \App\Models\TransactionSummary::updateOrCreate(
+            [
+                'purchase_order_id' => $purchaseOrder->id,
+                'customer_id' => $customer->id,
+            ],
+            [
+                'total_bill' => $totalBill,
+                'total_dp' => $totalDP,
+                'additional_payment' => $additionalPayment,
+                'remaining_payment' => max(0, $totalBill - $totalPaid),
+                'status' => $totalPaid >= $totalBill ? 'completed' : 'partial',
+                'notes' => $request->notes ?? '',
+                'completed_at' => now(),
+            ]
+        );
+
+        // Update status PO jika semua pelanggan telah melunasi pembayaran
+        $remainingCustomers = $purchaseOrder->poCustomers()
+            ->whereHas('customer', function($query) use ($purchaseOrder) {
+                $query->whereHas('poCustomers', function($subQuery) use ($purchaseOrder) {
+                    $subQuery->where('purchase_order_id', $purchaseOrder->id)
+                             ->where('status', '!=', 'complete');
+                });
+            })
+            ->count();
+
+        if ($remainingCustomers === 0) {
+            $purchaseOrder->status = 'completed';
+            $purchaseOrder->save();
+
+            // Log activity when completing the purchase order
+            tulis_log_activity("menyelesaikan purcase order \"{$purchaseOrder->title}\"", PurchaseOrder::class, $purchaseOrder->id);
+        }
+
+        return redirect()->route('po.customers.show-transaction-detail', [$purchaseOrder, $customer])->with('success', 'Transaksi pelanggan ' . $customer->name . ' telah diselesaikan.');
     }
 
     /**
@@ -260,6 +336,56 @@ class PoCustomerController extends Controller
             ->groupBy('customer_id');
 
         return view('po-customers.distribute-stock', compact('purchaseOrder', 'poCustomersGrouped'));
+    }
+
+    /**
+     * Show the transaction details for a specific customer in a purchase order
+     */
+    public function showTransactionDetail(PurchaseOrder $purchaseOrder, Customer $customer)
+    {
+        // Ambil semua pesanan pelanggan dalam PO ini dan kelompokkan berdasarkan produk
+        $customerOrders = $purchaseOrder->poCustomers()
+            ->where('customer_id', $customer->id)
+            ->with('product')
+            ->get()
+            ->groupBy('product_id'); // Kelompokkan berdasarkan produk
+
+        if ($customerOrders->isEmpty()) {
+            return redirect()->back()->with('error', 'Tidak ditemukan pesanan untuk pelanggan ini dalam PO ini.');
+        }
+
+        // Hitung total tagihan berdasarkan pesanan yang dikelompokkan
+        $totalBill = 0;
+        $aggregatedOrders = collect();
+
+        foreach ($customerOrders as $productId => $orders) {
+            $product = $orders->first()->product;
+
+            // Agregasi jumlah pesanan dan jumlah diterima
+            $totalItemQuantity = $orders->sum('item_quantity');
+            $totalReceivedQuantity = $orders->sum('received_quantity');
+
+            // Buat objek agregasi
+            $aggregatedOrder = (object)[
+                'product' => $product,
+                'total_item_quantity' => $totalItemQuantity,
+                'total_received_quantity' => $totalReceivedQuantity ?: 0,
+                'individual_orders' => $orders // Simpan pesanan individu untuk referensi
+            ];
+
+            $aggregatedOrders->push($aggregatedOrder);
+            $totalBill += $product->price * $totalReceivedQuantity;
+        }
+
+        // Ambil total DP
+        $totalDP = $purchaseOrder->downPayments()
+            ->where('customer_id', $customer->id)
+            ->sum('amount');
+
+        // Hitung sisa pembayaran
+        $remainingPayment = $totalBill - $totalDP;
+
+        return view('po-customers.transaction-detail', compact('purchaseOrder', 'customer', 'aggregatedOrders', 'totalBill', 'totalDP', 'remainingPayment'));
     }
 
     /**

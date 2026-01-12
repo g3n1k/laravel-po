@@ -1,31 +1,31 @@
+<!-- resources/views/po-customers/transaction-detail.blade.php -->
 @extends('layouts.app')
 
 @section('content')
 <div class="container">
     <div class="row">
         <div class="col-md-12">
-            <h1>Penyelesaian Transaksi - {{ $customer->name }} ({{ $purchaseOrder->title }})</h1>
-            
+            <h1>Detail Transaksi - {{ $customer->name }} ({{ $purchaseOrder->title }})</h1>
+
             <div class="d-flex justify-content-between mb-3">
-                
                 <a href="{{ route('master.purchase-orders.show', $purchaseOrder) }}" class="btn btn-secondary">
                     <i class="fas fa-arrow-left"></i> Kembali ke Detail PO
                 </a>
                 <a href="{{ route('po.index') }}" class="btn btn-outline-secondary">Kembali ke Daftar PO</a>
             </div>
-            
+
             @if(session('success'))
                 <div class="alert alert-success">
                     {{ session('success') }}
                 </div>
             @endif
-            
+
             @if(session('error'))
                 <div class="alert alert-danger">
                     {{ session('error') }}
                 </div>
             @endif
-            
+
             <!-- Informasi Pelanggan -->
             <div class="card mb-4">
                 <div class="card-header">
@@ -50,7 +50,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <!-- Tabel Pesanan -->
             <div class="card mb-4">
                 <div class="card-header">
@@ -66,6 +66,7 @@
                                     <th>Jumlah Diterima</th>
                                     <th>Harga Barang</th>
                                     <th>Total</th>
+                                    <th>Status</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -75,7 +76,18 @@
                                     <td>{{ $order->total_item_quantity }}</td>
                                     <td>{{ $order->total_received_quantity }}</td>
                                     <td>Rp {{ number_format($order->product->price, 0, ',', '.') }}</td>
-                                    <td class="order-total">Rp {{ number_format($order->total_received_quantity * $order->product->price, 0, ',', '.') }}</td>
+                                    <td>Rp {{ number_format($order->total_received_quantity * $order->product->price, 0, ',', '.') }}</td>
+                                    <td>
+                                        @if($order->total_received_quantity == 0)
+                                            <span class="badge bg-danger">Out of Stock</span>
+                                        @elseif($order->total_received_quantity < $order->total_item_quantity)
+                                            <span class="badge bg-warning">Not Complete</span>
+                                        @elseif($order->total_received_quantity >= $order->total_item_quantity)
+                                            <span class="badge bg-success">Complete</span>
+                                        @else
+                                            <span class="badge bg-secondary">Waiting</span>
+                                        @endif
+                                    </td>
                                 </tr>
                                 @endforeach
                             </tbody>
@@ -83,7 +95,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <!-- Ringkasan Pembayaran -->
             <div class="card">
                 <div class="card-header">
@@ -94,7 +106,7 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="notes" class="form-label">Catatan</label>
-                                <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+                                <textarea class="form-control" id="notes" name="notes" rows="3" readonly>{{ $purchaseOrder->poCustomers->where('customer_id', $customer->id)->first()->notes ?? '' }}</textarea>
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -112,25 +124,10 @@
                                     <span id="remaining-payment">Rp {{ number_format($remainingPayment, 0, ',', '.') }}</span>
                                 </div>
                                 <hr>
-                                <div class="mb-3">
-                                    <label for="additional_payment" class="form-label">Bayar Tambahan</label>
-                                    <input type="number" class="form-control" id="additional_payment" min="0" value="0">
-                                    <div class="form-text">Masukkan jumlah pembayaran tambahan jika pelanggan membayar sebagian atau lunas</div>
-                                </div>
-
                                 <div class="d-flex justify-content-between mb-3">
                                     <strong>Total yang Harus Dibayar:</strong>
-                                    <strong id="final-amount">Rp {{ number_format($remainingPayment, 0, ',', '.') }}</strong>
+                                    <strong id="final-amount">Rp {{ number_format(max(0, $remainingPayment), 0, ',', '.') }}</strong>
                                 </div>
-
-                                <form action="{{ route('po.customers.complete-transaction', [$purchaseOrder, $customer]) }}" method="POST">
-                                    @csrf
-                                    <input type="hidden" name="notes" id="notesInput">
-                                    <input type="hidden" name="additional_payment" id="additionalPaymentInput" value="0">
-                                    <button type="submit" class="btn btn-success w-100" id="complete-btn">
-                                        <i class="fas fa-check-circle"></i> Selesaikan Transaksi
-                                    </button>
-                                </form>
                             </div>
                         </div>
                     </div>
@@ -139,54 +136,4 @@
         </div>
     </div>
 </div>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const totalBillElement = document.getElementById('total-bill');
-    const remainingPaymentElement = document.getElementById('remaining-payment');
-    const finalAmountElement = document.getElementById('final-amount');
-    const completeBtn = document.getElementById('complete-btn');
-    const notesInput = document.getElementById('notes');
-    const notesHiddenInput = document.querySelector('input[name="notes"]');
-    const additionalPaymentInput = document.getElementById('additional_payment');
-    const additionalPaymentHiddenInput = document.getElementById('additionalPaymentInput');
-
-    // Fungsi untuk menghitung ulang total dan sisa pembayaran
-    function updateTotals() {
-        // Total bill dihitung berdasarkan jumlah diterima yang sudah ditentukan sebelumnya
-        const totalBill = {{ $totalBill }};
-
-        // Update total tagihan
-        totalBillElement.textContent = 'Rp ' + totalBill.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-
-        // Hitung sisa pembayaran
-        const totalDP = {{ $totalDP }};
-        const additionalPayment = parseInt(additionalPaymentInput.value) || 0;
-        const totalPaid = totalDP + additionalPayment;
-        const remainingPayment = totalBill - totalPaid;
-
-        // Update sisa pembayaran
-        remainingPaymentElement.textContent = 'Rp ' + Math.abs(remainingPayment).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-        finalAmountElement.textContent = 'Rp ' + Math.max(0, remainingPayment).toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-
-        // Aktifkan/nonaktifkan tombol selesai berdasarkan sisa pembayaran
-        // Tombol sekarang selalu aktif karena bisa saja pelanggan membayar sebagian
-        completeBtn.disabled = false;
-
-        // Simpan pembayaran tambahan ke input tersembunyi
-        additionalPaymentHiddenInput.value = additionalPayment;
-    }
-
-    // Tambahkan event listener untuk perubahan pembayaran tambahan
-    additionalPaymentInput.addEventListener('input', updateTotals);
-
-    // Simpan catatan ke input tersembunyi saat berubah
-    notesInput.addEventListener('input', function() {
-        notesHiddenInput.value = this.value;
-    });
-
-    // Inisialisasi nilai awal
-    updateTotals();
-});
-</script>
 @endsection

@@ -77,7 +77,7 @@
                         <div class="col-md-3 mb-3">
                             <div class="card bg-warning text-dark">
                                 <div class="card-body text-center">
-                                    <h5>Total Item</h5>
+                                    <h5>Pesanan Item</h5>
                                     <h3>{{ $purchaseOrder->poCustomers->sum('item_quantity') }}</h3>
                                 </div>
                             </div>
@@ -109,7 +109,10 @@
                                                 <td>{{ $purchaseOrder->poCustomers->where('product_id', $product->id)->sum('item_quantity') }}</td>
                                                 <td>
                                                     @php
-                                                        $totalOrdered = $purchaseOrder->poCustomers->where('product_id', $product->id)->sum('item_quantity');
+                                                        $totalOrdered = $purchaseOrder->poCustomers
+                                                            ->where('product_id', $product->id)
+                                                            ->where('payment_status', '==', 'unpaid')
+                                                            ->sum('item_quantity');
                                                         $diff = $product->stock - $totalOrdered;
                                                     @endphp
                                                     {{ $diff }}
@@ -118,7 +121,7 @@
                                                     @elseif($diff == 0)
                                                         <span class="badge bg-warning">Pas</span>
                                                     @else
-                                                        <span class="badge bg-success">Cukup</span>
+                                                        <span class="badge bg-success">stok masih ada</span>
                                                     @endif
                                                 </td>
                                                 <td>
@@ -147,12 +150,13 @@
                                     <table class="table table-bordered">
                                         <thead>
                                             <tr>
-                                                <th>Nama Pelanggan</th>
-                                                <th>Jumlah Item Dipesan</th>
-                                                <th>Jumlah Item Diterima</th>
+                                                <th>Nama</th>
+                                                <th>Item Dipesan</th>
+                                                <th>Item Diterima</th>
                                                 <th>Total DP</th>
-                                                <th>Tagihan yang Harus Dibayar</th>
+                                                <th>Tagihan</th>
                                                 <th>Kurang Bayar</th>
+                                                <th>Status</th>
                                                 <th>Aksi</th>
                                             </tr>
                                         </thead>
@@ -197,6 +201,13 @@
                                             @foreach($customerSummary as $summary)
                                             @php
                                                 $outstandingAmount = $summary['total_bill'] - ($summary['total_dp'] ?? 0);
+
+                                                // Cek apakah semua pesanan pelanggan sudah selesai
+                                                $allComplete = $purchaseOrder->poCustomers
+                                                    ->where('customer_id', $summary['customer']->id)
+                                                    ->every(function ($order) {
+                                                        return $order->status === 'complete';
+                                                    });
                                             @endphp
                                             <tr>
                                                 <td>{{ $summary['customer']->name }}</td>
@@ -206,15 +217,30 @@
                                                 <td>Rp {{ number_format($summary['total_bill'], 0, ',', '.') }}</td>
                                                 <td>Rp {{ number_format($outstandingAmount, 0, ',', '.') }}</td>
                                                 <td>
+                                                    @php
+                                                        // Cek apakah semua pesanan pelanggan sudah paid
+                                                        $allPaid = $purchaseOrder->poCustomers
+                                                            ->where('customer_id', $summary['customer']->id)
+                                                            ->every(function ($order) {
+                                                                return $order->payment_status === 'paid';
+                                                            });
+                                                    @endphp
+                                                    @if($allPaid)
+                                                        <span class="badge bg-success">Paid</span>
+                                                    @else
+                                                        <span class="badge bg-warning">Unpaid</span>
+                                                    @endif
+                                                </td>
+                                                <td>
                                                     <div class="btn-group" role="group">
-                                                        @if($outstandingAmount > 0)
+                                                        @if($allPaid)
+                                                            <a href="{{ route('po.customers.show-transaction-detail', [$purchaseOrder, $summary['customer']]) }}" class="btn btn-info btn-sm">
+                                                                <i class="fas fa-eye"></i> Lihat Detail
+                                                            </a>
+                                                        @else
                                                             <a href="{{ route('po.customers.show-complete-transaction', [$purchaseOrder, $summary['customer']]) }}" class="btn btn-primary btn-sm">
                                                                 <i class="fas fa-cash-register"></i> Proses
                                                             </a>
-                                                        @elseif($summary['total_bill'] == 0)
-                                                            <span class="badge bg-warning">Out Stock</span>
-                                                        @else
-                                                            <span class="badge bg-success">Lunas</span>
                                                         @endif
                                                     </div>
                                                 </td>

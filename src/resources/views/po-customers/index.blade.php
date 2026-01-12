@@ -34,6 +34,7 @@
                                     <th>Jumlah Item</th>
                                     <th>Item Diterima</th>
                                     <th>Status</th>
+                                    <th>Payment</th>
                                     <th>Tanggal</th>
                                     <th>Aksi</th>
                                 </tr>
@@ -57,6 +58,13 @@
                                             <span class="badge bg-warning">Not Complete</span>
                                         @elseif($poCustomer->status === 'cancel')
                                             <span class="badge bg-dark">Cancel</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if($poCustomer->payment_status === 'paid')
+                                            <span class="badge bg-success">Paid</span>
+                                        @else
+                                            <span class="badge bg-warning">Unpaid</span>
                                         @endif
                                     </td>
                                     <td>{{ $poCustomer->ordered_at->format('d M Y H:i') }}</td>
