@@ -116,6 +116,7 @@
                                     <thead>
                                         <tr>
                                             <th>Tanggal</th>
+                                            <th>Nama User</th>
                                             <th>Kegiatan</th>
                                         </tr>
                                     </thead>
@@ -123,6 +124,7 @@
                                         @foreach($recentActivities as $activity)
                                         <tr>
                                             <td>{{ $activity->created_at->format('Y-m-d H:i') }}</td>
+                                            <td>{{ $activity->user ? $activity->user->name : 'System' }}</td>
                                             <td>{{ $activity->description }}</td>
                                         </tr>
                                         @endforeach
