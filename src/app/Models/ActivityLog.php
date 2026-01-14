@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use App\Models\User;
+use DateTimeInterface;
 
 class ActivityLog extends Model
 {
@@ -24,5 +25,17 @@ class ActivityLog extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Prepare a date for array / JSON serialization.
+     *
+     * @param  \DateTimeInterface  $date
+     * @return string
+     */
+    protected function serializeDate(DateTimeInterface $date)
+    {
+        return $date->setTimezone(new \DateTimeZone(config('app.timezone', 'Asia/Jakarta')))
+                    ->format('Y-m-d H:i:s');
     }
 }
