@@ -109,12 +109,20 @@ scheduler-run:
 # ==========================
 deploy:
 	echo "🚀 Deploying ($(ENV))..."
-	$(DC) pull
-	$(DC) up -d --build
+	$(DC) git pull
+# 	$(DC) up -d --build
 	$(DC) exec $(APP) php artisan migrate --force
 	$(DC) exec $(APP) php artisan optimize
 # 	$(DC) exec $(APP) php artisan queue:restart
 	echo "✅ Deploy finished"
+
+
+# =========================
+# REMOTE UPDATE PRODUCTION
+# =========================
+remote-update:
+	ansible-playbook -i ansible/inventory.ini ansible/deploy.yml
+
 
 # ==========================
 # CATCH-ALL (IMPORTANT)
