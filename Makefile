@@ -68,6 +68,10 @@ log:
 
 ps: 
 	$(DC) ps
+	
+in: 	
+	$(DC) exec $(prefix)$(d) sh
+
 
 # ==========================
 # CONTAINER ACCESS

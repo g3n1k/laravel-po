@@ -1,7 +1,8 @@
 services:
   po_app:
-    build:
-      context: ./docker/php
+    # build:
+    #   context: ./docker/php
+    image: laravel-po-po_app
     container_name: po_app
     restart: ${RESTART_POLICY:-no}
     working_dir: /var/www
@@ -9,28 +10,28 @@ services:
       - ./src:/var/www
     env_file:
       - .env
-    depends_on:
-      - po_db
-      - po_redis
-      - po_minio
+    # depends_on:
+    #   - po_db
+    #   - po_redis
+    #   - po_minio
     networks:
       - network_shared
 
-  po_queue:
-    build:
-      context: ./docker/php
-    container_name: po_queue
-    restart: ${RESTART_POLICY:-no}
-    working_dir: /var/www
-    command: php artisan queue:work redis --sleep=3 --tries=3
-    volumes:
-      - ./src:/var/www
-    env_file:
-      - .env
-    depends_on:
-      - po_redis
-    networks:
-      - network_shared
+  # po_queue:
+  #   build:
+  #     context: ./docker/php
+  #   container_name: po_queue
+  #   restart: ${RESTART_POLICY:-no}
+  #   working_dir: /var/www
+  #   command: php artisan queue:work redis --sleep=3 --tries=3
+  #   volumes:
+  #     - ./src:/var/www
+  #   env_file:
+  #     - .env
+  #   depends_on:
+  #     - po_redis
+  #   networks:
+  #     - network_shared
 
   po_nginx:
     image: nginx:1.26-alpine
@@ -46,47 +47,47 @@ services:
     networks:
       - network_shared
 
-  po_db:
-    image: postgres:16-alpine
-    container_name: po_db
-    restart: ${RESTART_POLICY:-no}
-    environment:
-      POSTGRES_DB: ${DB_DATABASE}
-      POSTGRES_USER: ${DB_USERNAME}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      TZ: Asia/Jakarta
-      PGTZ: Asia/Jakarta
-    ports:
-      - "${DB_PORT}:5432"
-    volumes:
-      - ./volumes/postgres:/var/lib/postgresql/data
-    networks:
-      - network_shared
+  # po_db:
+  #   image: postgres:16-alpine
+  #   container_name: po_db
+  #   restart: ${RESTART_POLICY:-no}
+  #   environment:
+  #     POSTGRES_DB: ${DB_DATABASE}
+  #     POSTGRES_USER: ${DB_USERNAME}
+  #     POSTGRES_PASSWORD: ${DB_PASSWORD}
+  #     TZ: Asia/Jakarta
+  #     PGTZ: Asia/Jakarta
+  #   ports:
+  #     - "${DB_PORT}:5432"
+  #   volumes:
+  #     - ./volumes/postgres:/var/lib/postgresql/data
+  #   networks:
+  #     - network_shared
 
-  po_redis:
-    image: redis:7-alpine
-    container_name: po_redis
-    restart: ${RESTART_POLICY:-no}
-    command: redis-server --save "" --appendonly no
-    networks:
-      - network_shared
+  # po_redis:
+  #   image: redis:7-alpine
+  #   container_name: po_redis
+  #   restart: ${RESTART_POLICY:-no}
+  #   command: redis-server --save "" --appendonly no
+  #   networks:
+  #     - network_shared
 
-  po_minio:
-    image: minio/minio:latest
-    container_name: po_minio
-    restart: ${RESTART_POLICY:-no}
-    command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
-      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
-    volumes:
-      - ./volumes/minio:/data
-    ports:
-      - "9000:9000"
-      - "9001:9001"
-    networks:
-      - network_shared
+  # po_minio:
+  #   image: minio/minio:latest
+  #   container_name: po_minio
+  #   restart: ${RESTART_POLICY:-no}
+  #   command: server /data --console-address ":9001"
+  #   environment:
+  #     MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+  #     MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+  #   volumes:
+  #     - ./volumes/minio:/data
+  #   ports:
+  #     - "9000:9000"
+  #     - "9001:9001"
+  #   networks:
+  #     - network_shared
 
 networks:
   network_shared:
-    driver: bridge
+    external: true
