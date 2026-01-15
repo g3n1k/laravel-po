@@ -12,6 +12,7 @@ class DownPayment extends Model
     protected $fillable = [
         'purchase_order_id',
         'customer_id',
+        'transaction_summary_id',
         'amount',
         'paid_at',
         'notes',

@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('purchase_order_id')->constrained()->onDelete('cascade');
             $table->foreignId('customer_id')->constrained()->onDelete('cascade');
+            $table->unsignedBigInteger('transaction_summary_id')->nullable();
             $table->decimal('amount', 10, 2);
             $table->timestamp('paid_at')->useCurrent();
             $table->text('notes')->nullable();

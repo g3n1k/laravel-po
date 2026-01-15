@@ -60,6 +60,9 @@ restart: down up log
 build:
 	$(DC) build --no-cache $(prefix)$(d)
 
+docker-build:
+	docker build -t g3n1k/3ddm-po -f Dockerfile .
+
 log:
 	$(DC) logs -f $(prefix)$(d)
 
@@ -84,6 +87,14 @@ artisan:
 composer:
 	$(DC) exec $(APP) composer $(filter-out $@,$(MAKECMDGOALS))
 
+# Build application dependencies and assets
+build-app:
+	$(DC) exec $(APP) composer install
+	$(DC) exec $(APP) php artisan key:generate
+	$(DC) exec $(APP) php artisan config:cache
+	$(DC) exec $(APP) php artisan route:cache
+	$(DC) exec $(APP) php artisan view:cache
+
 # ==========================
 # QUEUE & SCHEDULER
 # ==========================
@@ -102,7 +113,7 @@ deploy:
 	$(DC) up -d --build
 	$(DC) exec $(APP) php artisan migrate --force
 	$(DC) exec $(APP) php artisan optimize
-	$(DC) exec $(APP) php artisan queue:restart
+# 	$(DC) exec $(APP) php artisan queue:restart
 	echo "✅ Deploy finished"
 
 # ==========================

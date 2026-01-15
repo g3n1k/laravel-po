@@ -1,0 +1,9 @@
+- name: Deploy Laravel to STB
+  hosts: stb
+  gather_facts: no
+
+  tasks:
+    - name: Run make deploy
+      shell: |
+        cd /home/ub/workspace/laravel-po
+        make deploy

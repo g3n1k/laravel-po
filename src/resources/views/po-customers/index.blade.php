@@ -73,16 +73,25 @@
                                             <a href="{{ route('po.customers.show', [$purchaseOrder, $poCustomer]) }}" class="btn btn-info btn-sm">
                                                 <i class="fas fa-eye"></i>
                                             </a>
-                                            <a href="{{ route('po.customers.edit', [$purchaseOrder, $poCustomer]) }}" class="btn btn-warning btn-sm">
-                                                <i class="fas fa-edit"></i>
-                                            </a>
-                                            <form action="{{ route('po.customers.destroy', [$purchaseOrder, $poCustomer]) }}" method="POST" class="d-inline">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Apakah Anda yakin ingin menghapus pesanan ini?')">
+                                            @if($poCustomer->payment_status !== 'paid' && $poCustomer->transaction_summary_id === null)
+                                                <a href="{{ route('po.customers.edit', [$purchaseOrder, $poCustomer]) }}" class="btn btn-warning btn-sm">
+                                                    <i class="fas fa-edit"></i>
+                                                </a>
+                                                <form action="{{ route('po.customers.destroy', [$purchaseOrder, $poCustomer]) }}" method="POST" class="d-inline">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Apakah Anda yakin ingin menghapus pesanan ini?')">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </form>
+                                            @else
+                                                <button class="btn btn-warning btn-sm" disabled title="transaksi selesai">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button class="btn btn-danger btn-sm" disabled title="transaksi selesai">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
-                                            </form>
+                                            @endif
                                         </div>
                                     </td>
                                 </tr>

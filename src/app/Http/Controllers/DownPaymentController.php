@@ -64,7 +64,10 @@ class DownPaymentController extends Controller
             abort(404);
         }
 
-        return view('down-payments.show', compact('downPayment'));
+        // Cek apakah DP ini sudah terkait dengan transaksi yang selesai
+        $isLinkedToCompletedTransaction = $downPayment->transaction_summary_id !== null;
+
+        return view('down-payments.show', compact('downPayment', 'isLinkedToCompletedTransaction'));
     }
 
     /**
@@ -75,6 +78,11 @@ class DownPaymentController extends Controller
         // Pastikan DownPayment ini milik PO yang sedang diakses
         if ($downPayment->purchase_order_id !== $purchaseOrder->id) {
             abort(404);
+        }
+
+        // Cek apakah DP ini sudah terkait dengan transaksi yang selesai
+        if ($downPayment->transaction_summary_id !== null) {
+            return redirect()->back()->with('error', 'Down payment ini sudah terkait dengan transaksi yang selesai dan tidak bisa diedit.');
         }
 
         $customers = Customer::all();
@@ -89,6 +97,11 @@ class DownPaymentController extends Controller
         // Pastikan DownPayment ini milik PO yang sedang diakses
         if ($downPayment->purchase_order_id !== $purchaseOrder->id) {
             abort(404);
+        }
+
+        // Cek apakah DP ini sudah terkait dengan transaksi yang selesai
+        if ($downPayment->transaction_summary_id !== null) {
+            return redirect()->back()->with('error', 'Down payment ini sudah terkait dengan transaksi yang selesai dan tidak bisa diupdate.');
         }
 
         $request->validate([
@@ -113,6 +126,11 @@ class DownPaymentController extends Controller
         // Pastikan DownPayment ini milik PO yang sedang diakses
         if ($downPayment->purchase_order_id !== $purchaseOrder->id) {
             abort(404);
+        }
+
+        // Cek apakah DP ini sudah terkait dengan transaksi yang selesai
+        if ($downPayment->transaction_summary_id !== null) {
+            return redirect()->back()->with('error', 'Down payment ini sudah terkait dengan transaksi yang selesai dan tidak bisa dihapus.');
         }
 
         $downPayment->delete();

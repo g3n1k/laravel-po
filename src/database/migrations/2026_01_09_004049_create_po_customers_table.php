@@ -22,6 +22,7 @@ return new class extends Migration
             $table->enum('payment_status', ['unpaid', 'paid'])->default('unpaid');
             $table->decimal('payment_amount', 10, 2)->default(0);
             $table->decimal('payment_product_price', 10, 2)->default(0);
+            $table->unsignedBigInteger('transaction_summary_id')->nullable();
             $table->timestamp('ordered_at')->useCurrent();
             $table->timestamps();
         });

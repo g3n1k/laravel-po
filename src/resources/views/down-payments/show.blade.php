@@ -38,7 +38,15 @@
                 </div>
                 <div class="card-footer">
                     <a href="{{ route('po.down-payments.index', $downPayment->purchase_order_id) }}" class="btn btn-secondary">Kembali</a>
-                    <a href="{{ route('po.down-payments.edit', [$downPayment->purchase_order_id, $downPayment]) }}" class="btn btn-warning">Edit</a>
+                    @if($isLinkedToCompletedTransaction)
+                        <button class="btn btn-warning" disabled>Edit (Terkunci)</button>
+                        <div class="mt-2 text-warning">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            Down payment ini sudah terkait dengan transaksi yang selesai dan tidak bisa diedit atau dihapus.
+                        </div>
+                    @else
+                        <a href="{{ route('po.down-payments.edit', [$downPayment->purchase_order_id, $downPayment]) }}" class="btn btn-warning">Edit</a>
+                    @endif
                 </div>
             </div>
         </div>

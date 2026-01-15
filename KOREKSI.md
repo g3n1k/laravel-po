@@ -14,5 +14,10 @@ http://localhost:8000/po/1/customers/create
 produk yang ada disini, muncul dari pilihan produk yang kita buat pada master purcase order
 
 
+pada halaman detail purcase order, 
+table "produk dalam oder" tambah kan column jumlah produk di distribusi
 
+pada column po barang, kita butuh column id bayar, sehingga pembeli bisa membeli lagi saat sudah membayar, open new transaction
+
+tampilkan nama user yg melakukan pada log aktivitas 
 

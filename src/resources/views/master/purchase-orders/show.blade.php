@@ -95,8 +95,8 @@
                                                 <th>Nama Produk</th>
                                                 <th>Harga</th>
                                                 <th>Stok</th>
-                                                <th>Total Item Dipesan</th>
-                                                <th>Selisih dengan Stok</th>
+                                                <th>Dipesan</th>
+                                                <th>Selisih Stok</th>
                                                 <th>Aksi</th>
                                             </tr>
                                         </thead>
@@ -155,72 +155,152 @@
                                                 <th>Item Diterima</th>
                                                 <th>Total DP</th>
                                                 <th>Tagihan</th>
-                                                <th>Kurang Bayar</th>
+                                                <th>Kurang / Bayar</th>
                                                 <th>Status</th>
                                                 <th>Aksi</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             @php
-                                                $customerSummary = [];
-                                                // Kumpulkan data pesanan pelanggan
+                                                // Pisahkan data menjadi transaksi yang sudah selesai dan request baru
+                                                $completedTransactions = [];
+                                                $newRequests = [];
+
                                                 foreach($purchaseOrder->poCustomers as $poCustomer) {
                                                     $customerId = $poCustomer->customer_id;
+                                                    $transactionSummaryId = $poCustomer->transaction_summary_id;
 
-                                                    if (!isset($customerSummary[$customerId])) {
-                                                        $customerSummary[$customerId] = [
-                                                            'customer' => $poCustomer->customer,
-                                                            'total_items' => 0,
-                                                            'total_received' => 0,
-                                                            'total_bill' => 0
-                                                        ];
+                                                    if ($transactionSummaryId !== null) {
+                                                        // Ini adalah transaksi yang sudah selesai
+                                                        $key = $customerId . '_' . $transactionSummaryId;
+
+                                                        if (!isset($completedTransactions[$key])) {
+                                                            $completedTransactions[$key] = [
+                                                                'customer' => $poCustomer->customer,
+                                                                'transaction_summary_id' => $transactionSummaryId,
+                                                                'total_items' => 0,
+                                                                'total_received' => 0,
+                                                                'total_bill' => 0,
+                                                                'total_dp' => 0,
+                                                                'additional_payment' => 0
+                                                            ];
+                                                        }
+
+                                                        $completedTransactions[$key]['total_items'] += $poCustomer->item_quantity;
+                                                        $completedTransactions[$key]['total_received'] += $poCustomer->received_quantity;
+
+                                                        // Hitung total tagihan berdasarkan produk yang diterima
+                                                        $product = $poCustomer->product;
+                                                        $completedTransactions[$key]['total_bill'] += $product->price * $poCustomer->received_quantity;
+                                                    } else {
+                                                        // Ini adalah request baru
+                                                        $key = $poCustomer->customer_id . '_new';
+
+                                                        if (!isset($newRequests[$key])) {
+                                                            $newRequests[$key] = [
+                                                                'customer' => $poCustomer->customer,
+                                                                'total_items' => 0,
+                                                                'total_received' => 0,
+                                                                'total_bill' => 0,
+                                                                'total_dp' => 0,
+                                                                'additional_payment' => 0
+                                                            ];
+                                                        }
+
+                                                        $newRequests[$key]['total_items'] += $poCustomer->item_quantity;
+                                                        $newRequests[$key]['total_received'] += $poCustomer->received_quantity;
+
+                                                        // Hitung total tagihan berdasarkan produk yang diterima
+                                                        $product = $poCustomer->product;
+                                                        $newRequests[$key]['total_bill'] += $product->price * $poCustomer->received_quantity;
                                                     }
-
-                                                    $customerSummary[$customerId]['total_items'] += $poCustomer->item_quantity;
-                                                    $customerSummary[$customerId]['total_received'] += $poCustomer->received_quantity;
-
-                                                    // Hitung total tagihan berdasarkan produk yang diterima
-                                                    $product = $poCustomer->product;
-                                                    $customerSummary[$customerId]['total_bill'] += $product->price * $poCustomer->received_quantity;
                                                 }
 
-                                                // Inisialisasi total DP untuk semua pelanggan
-                                                foreach($customerSummary as $custId => $data) {
-                                                    $customerSummary[$custId]['total_dp'] = 0;
+                                                // Inisialisasi total DP dan additional payment untuk semua entri
+                                                foreach($completedTransactions as $key => $summary) {
+                                                    $completedTransactions[$key]['total_dp'] = 0;
+                                                    $completedTransactions[$key]['additional_payment'] = 0;
+                                                }
+                                                foreach($newRequests as $key => $summary) {
+                                                    $newRequests[$key]['total_dp'] = 0;
+                                                    $newRequests[$key]['additional_payment'] = 0;
                                                 }
 
-                                                // Hitung total DP per pelanggan
+                                                // Hitung total DP dan additional payment per pelanggan dan per transaction_summary_id
                                                 foreach($purchaseOrder->downPayments as $dp) {
                                                     $customerId = $dp->customer_id;
-                                                    if (isset($customerSummary[$customerId])) {
-                                                        $customerSummary[$customerId]['total_dp'] += $dp->amount;
+                                                    if ($dp->transaction_summary_id !== null) {
+                                                        // Ini adalah DP untuk transaksi yang sudah selesai
+                                                        $key = $customerId . '_' . $dp->transaction_summary_id;
+                                                        if (isset($completedTransactions[$key])) {
+                                                            $completedTransactions[$key]['total_dp'] += $dp->amount;
+                                                        }
+                                                    } else {
+                                                        // Ini adalah DP untuk request baru
+                                                        $key = $customerId . '_new';
+                                                        if (isset($newRequests[$key])) {
+                                                            $newRequests[$key]['total_dp'] += $dp->amount;
+                                                        }
                                                     }
                                                 }
                                             @endphp
 
-                                            @foreach($customerSummary as $summary)
+                                            <!-- Tampilkan transaksi yang sudah selesai terlebih dahulu -->
+                                            @foreach($completedTransactions as $summary)
                                             @php
-                                                $outstandingAmount = $summary['total_bill'] - ($summary['total_dp'] ?? 0);
-
-                                                // Cek apakah semua pesanan pelanggan sudah selesai
-                                                $allComplete = $purchaseOrder->poCustomers
-                                                    ->where('customer_id', $summary['customer']->id)
-                                                    ->every(function ($order) {
-                                                        return $order->status === 'complete';
-                                                    });
+                                                $outstandingAmount = max(0, $summary['total_bill'] - $summary['total_dp']); // Sisa pembayaran tidak boleh negatif
                                             @endphp
                                             <tr>
-                                                <td>{{ $summary['customer']->name }}</td>
+                                                <td>{{ $summary['customer']->name }} <small class="text-muted">(Transaksi Selesai #{{ $summary['transaction_summary_id'] }})</small></td>
                                                 <td>{{ $summary['total_items'] }}</td>
                                                 <td>{{ $summary['total_received'] }}</td>
-                                                <td>Rp {{ number_format($summary['total_dp'] ?? 0, 0, ',', '.') }}</td>
+                                                <td>Rp {{ number_format($summary['total_dp'], 0, ',', '.') }}</td>
                                                 <td>Rp {{ number_format($summary['total_bill'], 0, ',', '.') }}</td>
                                                 <td>Rp {{ number_format($outstandingAmount, 0, ',', '.') }}</td>
                                                 <td>
                                                     @php
-                                                        // Cek apakah semua pesanan pelanggan sudah paid
+                                                        // Cek apakah semua pesanan dalam transaksi ini sudah paid
                                                         $allPaid = $purchaseOrder->poCustomers
                                                             ->where('customer_id', $summary['customer']->id)
+                                                            ->where('transaction_summary_id', $summary['transaction_summary_id'])
+                                                            ->every(function ($order) {
+                                                                return $order->payment_status === 'paid';
+                                                            });
+                                                    @endphp
+                                                    @if($allPaid)
+                                                        <span class="badge bg-success">Paid</span>
+                                                    @else
+                                                        <span class="badge bg-warning">Unpaid</span>
+                                                    @endif
+                                                </td>
+                                                <td>
+                                                    <div class="btn-group" role="group">
+                                                        <a href="{{ route('po.customers.show-transaction-detail', [$purchaseOrder, $summary['customer']]) }}" class="btn btn-info btn-sm">
+                                                            <i class="fas fa-eye"></i> Lihat Detail
+                                                        </a>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            @endforeach
+
+                                            <!-- Tampilkan request baru di bawahnya -->
+                                            @foreach($newRequests as $summary)
+                                            @php
+                                                $outstandingAmount = $summary['total_bill'] - $summary['total_dp'];
+                                            @endphp
+                                            <tr>
+                                                <td>{{ $summary['customer']->name }} <small class="text-muted">(Request Baru)</small></td>
+                                                <td>{{ $summary['total_items'] }}</td>
+                                                <td>{{ $summary['total_received'] }}</td>
+                                                <td>Rp {{ number_format($summary['total_dp'], 0, ',', '.') }}</td>
+                                                <td>Rp {{ number_format($summary['total_bill'], 0, ',', '.') }}</td>
+                                                <td>Rp {{ number_format($outstandingAmount, 0, ',', '.') }}</td>
+                                                <td>
+                                                    @php
+                                                        // Cek apakah semua pesanan dalam request baru ini sudah paid
+                                                        $allPaid = $purchaseOrder->poCustomers
+                                                            ->where('customer_id', $summary['customer']->id)
+                                                            ->whereNull('transaction_summary_id')
                                                             ->every(function ($order) {
                                                                 return $order->payment_status === 'paid';
                                                             });

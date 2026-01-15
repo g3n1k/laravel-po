@@ -19,6 +19,7 @@ class PoCustomer extends Model
         'payment_status',
         'payment_amount',
         'payment_product_price',
+        'transaction_summary_id',
         'ordered_at',
     ];
 
@@ -49,5 +50,10 @@ class PoCustomer extends Model
     public function product()
     {
         return $this->belongsTo(Product::class);
+    }
+
+    public function transactionSummary()
+    {
+        return $this->belongsTo(TransactionSummary::class, 'transaction_summary_id');
     }
 }

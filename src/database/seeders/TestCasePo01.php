@@ -12,7 +12,13 @@ use App\Models\Product;
 class TestCasePo01 extends Seeder
 {
     /**
-     * Run the database seeds.
+     * TestCasePo01 berisi:
+     * - Pelanggan sudah di insert
+     * - produk sudah di insert
+     * - po sudah di insert, dengan 
+     * - request po sudah di lakukan
+     * - dp sudah di insert
+     * - adjust stock product sudah di stock
      */
     public function run(): void
     {
