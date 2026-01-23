@@ -51,52 +51,7 @@
                 </div>
             </div>
 
-            <!-- Tabel Pesanan Belum Selesai -->
-            @if($aggregatedUncompletedOrders->count() > 0)
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5>Daftar Pesanan Belum Selesai</h5>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-bordered">
-                            <thead>
-                                <tr>
-                                    <th>Produk</th>
-                                    <th>Jumlah Pesanan</th>
-                                    <th>Jumlah Diterima</th>
-                                    <th>Harga Barang</th>
-                                    <th>Total</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach($aggregatedUncompletedOrders as $order)
-                                <tr>
-                                    <td>{{ $order->product->name }}</td>
-                                    <td>{{ $order->total_item_quantity }}</td>
-                                    <td>{{ $order->total_received_quantity }}</td>
-                                    <td>Rp {{ number_format($order->product->price, 0, ',', '.') }}</td>
-                                    <td>Rp {{ number_format($order->total_received_quantity * $order->product->price, 0, ',', '.') }}</td>
-                                    <td>
-                                        @if($order->total_received_quantity == 0)
-                                            <span class="badge bg-danger">Out of Stock</span>
-                                        @elseif($order->total_received_quantity < $order->total_item_quantity)
-                                            <span class="badge bg-warning">Not Complete</span>
-                                        @elseif($order->total_received_quantity >= $order->total_item_quantity)
-                                            <span class="badge bg-success">Complete</span>
-                                        @else
-                                            <span class="badge bg-secondary">Waiting</span>
-                                        @endif
-                                    </td>
-                                </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-            @endif
+            
 
             <!-- Tabel Pesanan Sudah Selesai -->
             @if($aggregatedCompletedOrders->count() > 0)
@@ -165,31 +120,19 @@
                         <div class="col-md-6">
                             <div class="border rounded p-3">
                                 <div class="d-flex justify-content-between mb-2">
-                                    <span>Total Tagihan Belum Selesai:</span>
-                                    <span id="total-bill">Rp {{ number_format($totalUncompletedBill, 0, ',', '.') }}</span>
+                                    <span>Down Payment:</span>
+                                    <span>Rp {{ number_format($totalCompletedDP, 0, ',', '.') }}</span>
                                 </div>
                                 <div class="d-flex justify-content-between mb-2">
-                                    <span>Total DP Belum Selesai:</span>
-                                    <span>- Rp {{ number_format($totalUncompletedDP, 0, ',', '.') }}</span>
-                                </div>
-                                <div class="d-flex justify-content-between mb-2">
-                                    <span>Sisa Pembayaran:</span>
-                                    <span id="remaining-payment">Rp {{ number_format($remainingUncompletedPayment, 0, ',', '.') }}</span>
+                                    <span>Pembayaran:</span>
+                                    <span>Rp {{ number_format($additionalPayment, 0, ',', '.') }}</span>
                                 </div>
                                 <hr>
                                 <div class="d-flex justify-content-between mb-2">
-                                    <span>Total Tagihan Sudah Selesai:</span>
+                                    <span>Total:</span>
                                     <span>Rp {{ number_format($totalCompletedBill, 0, ',', '.') }}</span>
                                 </div>
-                                <div class="d-flex justify-content-between mb-2">
-                                    <span>Total DP Sudah Selesai:</span>
-                                    <span>- Rp {{ number_format($totalCompletedDP, 0, ',', '.') }}</span>
-                                </div>
-                                <hr>
-                                <div class="d-flex justify-content-between mb-3">
-                                    <strong>Total yang Harus Dibayar:</strong>
-                                    <strong id="final-amount">Rp {{ number_format(max(0, $remainingUncompletedPayment), 0, ',', '.') }}</strong>
-                                </div>
+                                
                             </div>
                         </div>
                     </div>

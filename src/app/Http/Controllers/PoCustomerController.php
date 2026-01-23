@@ -8,6 +8,7 @@ use App\Models\Customer;
 use App\Models\Product;
 use Illuminate\Http\Request;
 
+use Illuminate\Support\Facades\DB;
 class PoCustomerController extends Controller
 {
     /**
@@ -159,8 +160,14 @@ class PoCustomerController extends Controller
      */
     public function completeTransaction(Request $request, PurchaseOrder $purchaseOrder, Customer $customer)
     {
-        // Ambil semua pesanan pelanggan dalam PO ini
-        $customerOrders = $purchaseOrder->poCustomers()->where('customer_id', $customer->id)->where('purchase_order_id', $purchaseOrder->id)->get();
+        // Hitung total tagihan dan DP sebelum membuat entri ringkasan transaksi
+        // Ambil semua pesanan pelanggan dalam PO ini yang belum diselesaikan
+        $customerOrders = $purchaseOrder->poCustomers()
+            ->where('customer_id', $customer->id)
+            ->where('purchase_order_id', $purchaseOrder->id)
+            ->where('payment_status', 'unpaid') // pilih hanya request yg belum di bayar
+            ->where('transaction_summary_id', null)
+            ->get();
 
         if ($customerOrders->isEmpty()) {
             return redirect()->back()->with('error', 'Tidak ditemukan pesanan untuk pelanggan ini dalam PO ini.');
@@ -174,6 +181,35 @@ class PoCustomerController extends Controller
         if ($allComplete) {
             return redirect()->back()->with('error', 'Transaksi pelanggan ' . $customer->name . ' sudah diselesaikan sebelumnya.');
         }
+
+        // Hitung total tagihan berdasarkan received quantity
+        $totalBill = 0;
+        foreach ($customerOrders as $order) {
+            $product = $order->product;
+            $totalBill += $product->price * $order->received_quantity;
+        }
+
+        $totalDP = $purchaseOrder->downPayments()
+            ->where('customer_id', $customer->id)
+            ->where('purchase_order_id', $purchaseOrder->id)
+            ->where('transaction_summary_id', null)
+            ->sum('amount');
+
+        $additionalPayment = $request->additional_payment ?? 0;
+        $totalPaid = $totalDP + $additionalPayment;
+
+        // Buat entri ringkasan transaksi di awal proses
+        $transactionSummary = \App\Models\TransactionSummary::create([
+            'purchase_order_id' => $purchaseOrder->id,
+            'customer_id' => $customer->id,
+            'total_bill' => $totalBill,
+            'total_dp' => $totalDP,
+            'additional_payment' => $additionalPayment,
+            'remaining_payment' => max(0, $totalBill - $totalPaid),
+            'status' => $totalPaid >= $totalBill ? 'completed' : 'partial',
+            'notes' => $request->notes ?? '',
+            'completed_at' => now(),
+        ]);
 
         // Update status berdasarkan received quantity yang sudah ada
         foreach ($customerOrders as $order) {
@@ -196,19 +232,11 @@ class PoCustomerController extends Controller
                 $order->payment_amount = $order->product->price * $order->received_quantity; // Jumlah pembayaran
             }
 
+            // Update dengan transaction_summary_id yang baru dibuat
+            $order->transaction_summary_id = $transactionSummary->id;
+
             $order->save();
         }
-
-        // Hitung total tagihan berdasarkan received quantity
-        $totalBill = 0;
-        foreach ($customerOrders as $order) {
-            $product = $order->product;
-            $totalBill += $product->price * $order->received_quantity;
-        }
-
-        $totalDP = $purchaseOrder->downPayments()->where('customer_id', $customer->id)->where('purchase_order_id', $purchaseOrder->id)->sum('amount');
-        $additionalPayment = $request->additional_payment ?? 0;
-        $totalPaid = $totalDP + $additionalPayment;
 
         // Update status semua pesanan pelanggan menjadi complete jika pembayaran cukup
         foreach ($customerOrders as $order) {
@@ -251,29 +279,6 @@ class PoCustomerController extends Controller
             }
         }
 
-        // Buat entri ringkasan transaksi
-        $transactionSummary = \App\Models\TransactionSummary::updateOrCreate(
-            [
-                'purchase_order_id' => $purchaseOrder->id,
-                'customer_id' => $customer->id,
-            ],
-            [
-                'total_bill' => $totalBill,
-                'total_dp' => $totalDP,
-                'additional_payment' => $additionalPayment,
-                'remaining_payment' => max(0, $totalBill - $totalPaid),
-                'status' => $totalPaid >= $totalBill ? 'completed' : 'partial',
-                'notes' => $request->notes ?? '',
-                'completed_at' => now(),
-            ]
-        );
-
-        // Update semua pesanan pelanggan dengan transaction_summary_id
-        foreach ($customerOrders as $order) {
-            $order->transaction_summary_id = $transactionSummary->id;
-            $order->save();
-        }
-
         // Update down payments yang terkait dengan customer ini dan PO ini agar terkait dengan transaction summary
         $downPayments = $purchaseOrder->downPayments()
             ->where('customer_id', $customer->id)
@@ -303,7 +308,7 @@ class PoCustomerController extends Controller
             tulis_log_activity("menyelesaikan purcase order \"{$purchaseOrder->title}\"", PurchaseOrder::class, $purchaseOrder->id);
         }
 
-        return redirect()->route('po.customers.show-transaction-detail', [$purchaseOrder, $customer])->with('success', 'Transaksi pelanggan ' . $customer->name . ' telah diselesaikan.');
+        return redirect()->route('master.purchase-orders.show', $purchaseOrder)->with('success', 'Transaksi pelanggan ' . $customer->name . ' telah diselesaikan.');
     }
 
     /**
@@ -311,6 +316,9 @@ class PoCustomerController extends Controller
      */
     public function showCompleteTransaction(PurchaseOrder $purchaseOrder, Customer $customer)
     {
+        // dd('showCompleteTransaction'); 
+        // http://localhost:8000/po/1/complete-transaction/1
+        
         // Ambil pesanan pelanggan dalam PO ini yang BELUM SELESAI (tanpa transaction_summary_id) dan kelompokkan berdasarkan produk
         $customerOrders = $purchaseOrder->poCustomers()
             ->where('customer_id', $customer->id)
@@ -378,57 +386,21 @@ class PoCustomerController extends Controller
     /**
      * Show the transaction details for a specific customer in a purchase order
      */
-    public function showTransactionDetail(PurchaseOrder $purchaseOrder, Customer $customer)
+    public function showTransactionDetail(Request $request, PurchaseOrder $purchaseOrder, Customer $customer)
     {
-        // Ambil semua pesanan pelanggan dalam PO ini dan kelompokkan berdasarkan produk
-        $customerOrders = $purchaseOrder->poCustomers()
-            ->where('customer_id', $customer->id)
-            ->with('product')
-            ->get()
-            ->groupBy('product_id'); // Kelompokkan berdasarkan produk
-
-        if ($customerOrders->isEmpty()) {
-            return redirect()->back()->with('error', 'Tidak ditemukan pesanan untuk pelanggan ini dalam PO ini.');
-        }
-
-        // Ambil pesanan pelanggan dalam PO ini yang BELUM SELESAI (tanpa transaction_summary_id) dan kelompokkan berdasarkan produk
-        $uncompletedOrders = $purchaseOrder->poCustomers()
-            ->where('customer_id', $customer->id)
-            ->whereNull('transaction_summary_id')
-            ->with('product')
-            ->get()
-            ->groupBy('product_id'); // Kelompokkan berdasarkan produk
+        // Get the transaction_summaries_id from query parameters
+        $transactionSummariesId = $request->query('transaction_summaries_id');
 
         // Ambil pesanan pelanggan dalam PO ini yang SUDAH SELESAI (dengan transaction_summary_id) dan kelompokkan berdasarkan produk
         $completedOrders = $purchaseOrder->poCustomers()
             ->where('customer_id', $customer->id)
-            ->whereNotNull('transaction_summary_id')
+            ->where('transaction_summary_id', $transactionSummariesId)
             ->with('product', 'transactionSummary')
             ->get()
             ->groupBy('product_id'); // Kelompokkan berdasarkan produk
 
-        // Hitung total tagihan untuk pesanan yang belum selesai
-        $totalUncompletedBill = 0;
-        $aggregatedUncompletedOrders = collect();
-
-        foreach ($uncompletedOrders as $productId => $orders) {
-            $product = $orders->first()->product;
-
-            // Agregasi jumlah pesanan dan jumlah diterima
-            $totalItemQuantity = $orders->sum('item_quantity');
-            $totalReceivedQuantity = $orders->sum('received_quantity');
-
-            // Buat objek agregasi
-            $aggregatedOrder = (object)[
-                'product' => $product,
-                'total_item_quantity' => $totalItemQuantity,
-                'total_received_quantity' => $totalReceivedQuantity ?: 0,
-                'individual_orders' => $orders, // Simpan pesanan individu untuk referensi
-                'is_completed' => false
-            ];
-
-            $aggregatedUncompletedOrders->push($aggregatedOrder);
-            $totalUncompletedBill += $product->price * $totalReceivedQuantity;
+        if ($completedOrders->isEmpty()) {
+            return redirect()->back()->with('error', 'Tidak ditemukan pesanan untuk pelanggan ini dalam PO ini.');
         }
 
         // Hitung total tagihan untuk pesanan yang sudah selesai
@@ -456,31 +428,26 @@ class PoCustomerController extends Controller
             $totalCompletedBill += $product->price * $totalReceivedQuantity;
         }
 
-        // Ambil total DP untuk pesanan yang belum selesai
-        $totalUncompletedDP = $purchaseOrder->downPayments()
-            ->where('customer_id', $customer->id)
-            ->whereNull('transaction_summary_id') // Hanya DP yang belum terkait dengan transaksi selesai
-            ->sum('amount');
-
         // Ambil total DP untuk pesanan yang sudah selesai
         $totalCompletedDP = $purchaseOrder->downPayments()
             ->where('customer_id', $customer->id)
-            ->whereNotNull('transaction_summary_id') // Hanya DP yang terkait dengan transaksi selesai
+            ->where('transaction_summary_id', $transactionSummariesId) // Hanya DP yang terkait dengan transaksi selesai
             ->sum('amount');
 
-        // Hitung sisa pembayaran untuk pesanan yang belum selesai
-        $remainingUncompletedPayment = $totalUncompletedBill - $totalUncompletedDP;
+        // value additional_payment mengambil dari table transaction_summaries.additional_payment
+        $additionalPayment = 0;
+        if ($transactionSummariesId) {
+            $transactionSummary = \App\Models\TransactionSummary::find($transactionSummariesId);
+            $additionalPayment = $transactionSummary ? $transactionSummary->additional_payment : 0;
+        }
 
         return view('po-customers.transaction-detail', compact(
             'purchaseOrder',
             'customer',
-            'aggregatedUncompletedOrders',
             'aggregatedCompletedOrders',
-            'totalUncompletedBill',
             'totalCompletedBill',
-            'totalUncompletedDP',
             'totalCompletedDP',
-            'remainingUncompletedPayment'
+            'additionalPayment',
         ));
     }
 

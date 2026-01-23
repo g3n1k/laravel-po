@@ -62,6 +62,9 @@ class PurchaseOrderController extends Controller
      */
     public function show(PurchaseOrder $purchaseOrder)
     {
+        // G3N1K
+        // http://localhost:8000/master/purchase-orders/1
+
         $purchaseOrder->load(['products', 'poCustomers.customer', 'downPayments']);
         return view('master.purchase-orders.show', compact('purchaseOrder'));
     }

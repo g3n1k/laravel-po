@@ -151,11 +151,11 @@
                                         <thead>
                                             <tr>
                                                 <th>Nama</th>
-                                                <th>Item Dipesan</th>
-                                                <th>Item Diterima</th>
-                                                <th>Total DP</th>
-                                                <th>Tagihan</th>
-                                                <th>Kurang / Bayar</th>
+                                                <th>Dipesan</th>
+                                                <th>Diterima</th>
+                                                <th>DP</th>
+                                                <th>Bayar</th>
+                                                <th>Total</th>
                                                 <th>Status</th>
                                                 <th>Aksi</th>
                                             </tr>
@@ -255,8 +255,8 @@
                                                 <td>{{ $summary['total_items'] }}</td>
                                                 <td>{{ $summary['total_received'] }}</td>
                                                 <td>Rp {{ number_format($summary['total_dp'], 0, ',', '.') }}</td>
-                                                <td>Rp {{ number_format($summary['total_bill'], 0, ',', '.') }}</td>
                                                 <td>Rp {{ number_format($outstandingAmount, 0, ',', '.') }}</td>
+                                                <td>Rp {{ number_format($summary['total_bill'], 0, ',', '.') }}</td>
                                                 <td>
                                                     @php
                                                         // Cek apakah semua pesanan dalam transaksi ini sudah paid
@@ -275,7 +275,7 @@
                                                 </td>
                                                 <td>
                                                     <div class="btn-group" role="group">
-                                                        <a href="{{ route('po.customers.show-transaction-detail', [$purchaseOrder, $summary['customer']]) }}" class="btn btn-info btn-sm">
+                                                        <a href="{{ route('po.customers.show-transaction-detail', [$purchaseOrder, $summary['customer']]) }}?transaction_summaries_id={{ $summary['transaction_summary_id'] }}" class="btn btn-info btn-sm">
                                                             <i class="fas fa-eye"></i> Lihat Detail
                                                         </a>
                                                     </div>

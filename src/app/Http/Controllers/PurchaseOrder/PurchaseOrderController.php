@@ -41,6 +41,7 @@ class PurchaseOrderController extends Controller
 
     public function show(PurchaseOrderModel $purchaseOrder)
     {
+        
         $customers = $purchaseOrder->orders()->with("customer")->distinct("customer_id")->get()->pluck("customer");
         $totalItems = $purchaseOrder->orders()->sum("quantity");
         
